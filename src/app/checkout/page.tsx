@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useCart } from "@/components/cart-provider";
+
+const DISCOUNT_OPTIONS = [25, 50, 75, 90] as const;
+type Discount = (typeof DISCOUNT_OPTIONS)[number];
+
+function applyDiscount(value: number, discount: Discount) {
+  return value * (1 - discount / 100);
+}
 
 export default function CheckoutPage() {
   const { items } = useCart();
@@ -12,6 +20,24 @@ export default function CheckoutPage() {
   );
   const shipping = subtotal >= 299 ? 0 : 19.9;
   const total = subtotal + shipping;
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [tempDiscount, setTempDiscount] = useState<Discount>(50);
+  const [savedDiscount, setSavedDiscount] = useState<Discount | null>(null);
+
+  const husbandSubtotal = savedDiscount != null ? applyDiscount(subtotal, savedDiscount) : null;
+  const husbandShipping = husbandSubtotal != null ? (husbandSubtotal >= 299 ? 0 : 19.9) : null;
+  const husbandTotal = husbandSubtotal != null && husbandShipping != null ? husbandSubtotal + husbandShipping : null;
+
+  function openModal() {
+    setTempDiscount(savedDiscount ?? 50);
+    setModalOpen(true);
+  }
+
+  function handleSave() {
+    setSavedDiscount(tempDiscount);
+    setModalOpen(false);
+  }
 
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12">
@@ -132,8 +158,9 @@ export default function CheckoutPage() {
             </button>
           </div>
 
-          {/* Right: Order Summary */}
-          <div>
+          {/* Right: Summaries */}
+          <div className="space-y-6">
+            {/* Order Summary */}
             <div className="bg-cream-light p-6 sticky top-20">
               <h2 className="text-[12px] font-medium uppercase tracking-[0.8px] text-charcoal mb-5 pb-2 border-b border-cream-dark">
                 ORDER SUMMARY
@@ -142,7 +169,6 @@ export default function CheckoutPage() {
               <div className="space-y-4 mb-6">
                 {items.map((item, index) => (
                   <div key={index} className="flex gap-3">
-                    {/* Thumbnail */}
                     <div
                       className="w-16 h-16 rounded flex-shrink-0"
                       style={{
@@ -159,7 +185,7 @@ export default function CheckoutPage() {
                       <p className="text-xs text-warm-gray">Qty: {item.quantity}</p>
                     </div>
                     <span className="text-sm font-medium text-charcoal">
-                      {(item.product.price * item.quantity).toFixed(0)} zl
+                      {(item.product.price * item.quantity).toFixed(0)} zł
                     </span>
                   </div>
                 ))}
@@ -168,19 +194,142 @@ export default function CheckoutPage() {
               <div className="space-y-2 pt-4 border-t border-cream-dark">
                 <div className="flex justify-between text-sm">
                   <span className="text-warm-gray">Subtotal</span>
-                  <span className="font-medium">{subtotal.toFixed(0)} zl</span>
+                  <span className="font-medium">{subtotal.toFixed(0)} zł</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-warm-gray">Shipping</span>
                   <span className="font-medium">
-                    {shipping === 0 ? "Free" : `${shipping.toFixed(2)} zl`}
+                    {shipping === 0 ? "Free" : `${shipping.toFixed(2)} zł`}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm pt-3 border-t border-cream-dark mt-3">
                   <span className="font-medium text-charcoal">Total</span>
-                  <span className="font-medium text-charcoal text-lg">{total.toFixed(2)} zl</span>
+                  <span className="font-medium text-charcoal text-lg">{total.toFixed(2)} zł</span>
                 </div>
               </div>
+
+            </div>
+
+            {/* Paragon for Husband */}
+            <div className="bg-cream-light p-6">
+              <h2 className="text-[12px] font-medium uppercase tracking-[0.8px] text-charcoal mb-5 pb-2 border-b border-cream-dark">
+                PARAGON FOR HUSBAND
+                {savedDiscount != null && (
+                  <span className="ml-2 text-[10px] font-normal normal-case tracking-normal text-warm-gray">
+                    (−{savedDiscount}%)
+                  </span>
+                )}
+              </h2>
+
+              {savedDiscount != null && husbandSubtotal != null && husbandShipping != null && husbandTotal != null ? (
+                <>
+                  <div className="space-y-4 mb-6">
+                    {items.map((item, index) => (
+                      <div key={index} className="flex gap-3">
+                        <div
+                          className="w-16 h-16 rounded flex-shrink-0"
+                          style={{
+                            background: `radial-gradient(ellipse at 50% 55%, ${item.color.hex}44 0%, ${item.color.hex}22 35%, #ece9e2 65%)`,
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-xs font-medium uppercase tracking-wide truncate">
+                            {item.product.name}
+                          </h3>
+                          <p className="text-xs text-warm-gray">
+                            {item.color.name} / Size {item.size}
+                          </p>
+                          <p className="text-xs text-warm-gray">Qty: {item.quantity}</p>
+                        </div>
+                        <span className="text-sm font-medium text-charcoal">
+                          {applyDiscount(item.product.price * item.quantity, savedDiscount).toFixed(0)} zł
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="space-y-2 pt-4 border-t border-cream-dark mb-5">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-warm-gray">Subtotal</span>
+                      <span className="font-medium">{husbandSubtotal.toFixed(0)} zł</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-warm-gray">Shipping</span>
+                      <span className="font-medium">
+                        {husbandShipping === 0 ? "Free" : `${husbandShipping.toFixed(2)} zł`}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm pt-3 border-t border-cream-dark mt-3">
+                      <span className="font-medium text-charcoal">Total</span>
+                      <span className="font-medium text-charcoal text-lg">{husbandTotal.toFixed(2)} zł</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-warm-gray mb-5">
+                  Nie skonfigurowano jeszcze paragonu dla męża.
+                </p>
+              )}
+
+              <button
+                onClick={openModal}
+                className="w-full border border-charcoal text-charcoal text-[11px] font-medium uppercase tracking-[0.8px] py-2.5 hover:bg-charcoal hover:text-white transition-colors"
+              >
+                {savedDiscount != null ? `Konfiguruj (−${savedDiscount}%)` : "Konfiguruj"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal */}
+      {modalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={(e) => { if (e.target === e.currentTarget) setModalOpen(false); }}
+        >
+          <div className="bg-white w-full max-w-md mx-4 p-8">
+            <h2 className="text-[12px] font-medium uppercase tracking-[0.8px] text-charcoal mb-5 pb-2 border-b border-border">
+              PARAGON FOR HUSBAND
+            </h2>
+
+            <p className="text-sm text-warm-gray leading-relaxed mb-6">
+              Boisz się pokazać wydatki swojemu mężowi? Ustaw jaki paragon chcesz abyśmy wrzucili do pudełka, z odpowiednio obniżonymi cenami. Na stronie znajdziesz zawsze oryginalne wartości.
+            </p>
+
+            <p className="text-[11px] font-medium uppercase tracking-[0.6px] text-charcoal mb-3">
+              Obniż wartość zamówienia o:
+            </p>
+
+            <div className="grid grid-cols-4 gap-2 mb-8">
+              {DISCOUNT_OPTIONS.map((option) => (
+                <button
+                  key={option}
+                  onClick={() => setTempDiscount(option)}
+                  className={`py-3 text-sm font-medium border transition-colors ${
+                    tempDiscount === option
+                      ? "bg-charcoal text-white border-charcoal"
+                      : "bg-white text-charcoal border-border hover:border-charcoal"
+                  }`}
+                >
+                  {option}%
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setModalOpen(false)}
+                className="flex-1 py-3 text-[11px] font-medium uppercase tracking-[0.8px] border border-border text-warm-gray hover:border-charcoal hover:text-charcoal transition-colors"
+              >
+                Anuluj
+              </button>
+              <button
+                onClick={handleSave}
+                className="flex-1 btn-cta"
+              >
+                ZAPISZ
+              </button>
             </div>
           </div>
         </div>
