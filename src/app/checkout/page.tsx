@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import posthog from "posthog-js";
 import { useCart } from "@/components/cart-provider";
 
 const DISCOUNT_OPTIONS = [25, 50, 75, 90] as const;
@@ -37,6 +38,10 @@ export default function CheckoutPage() {
   function handleSave() {
     setSavedDiscount(tempDiscount);
     setModalOpen(false);
+    posthog.capture("paragon_for_husband_configured", {
+      discount_percent: tempDiscount,
+      original_total: total,
+    });
   }
 
   return (
@@ -153,7 +158,18 @@ export default function CheckoutPage() {
             </section>
 
             {/* Place Order */}
-            <button className="btn-cta w-full sm:w-auto sm:min-w-[280px]">
+            <button
+              className="btn-cta w-full sm:w-auto sm:min-w-[280px]"
+              onClick={() => {
+                posthog.capture("place_order_clicked", {
+                  cart_item_count: items.length,
+                  subtotal: subtotal,
+                  shipping: shipping,
+                  total: total,
+                  paragon_discount_percent: savedDiscount,
+                });
+              }}
+            >
               PLACE ORDER
             </button>
           </div>
